@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CSC3007 Assignment 3</title>
+  <style>
+    h1{text-align: center;}
+    path {
+        stroke: black;
+        stroke-width: 0.5;
+      }
+    .tooltip{
+        pointer-events: none;
+    }
+
+  </style>
+</head>
+<body>
+    <h1>Singapore Population</h1>
+    <div style="text-align:left;vertical-align:top;padding:0"><svg id="my_dataviz3"></svg></div>
+    <div id="my_dataviz"><svg></svg></div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<script>
+
+let width = 1000, height = 600;
+
+let svg = d3.select("svg")
+    .attr("viewBox", "0 0 " + width + " " + height)
+
+    var SVG = d3.select("#my_dataviz3")
+    // create a list of keys and colors
+    var keys = ["0", "1-10000", "10000-20000", "20000-30000", "30000-40000", "40000-50000", "50000+"]
+    var allColor = ["#dfdfdf", "#91BAD6","#73A5C6","#528AAE", "#528AAE", "#2E5984", "#1E3F66"]   
+    
+    var color = d3.scaleOrdinal()
+        .domain(keys)
+        .range(allColor);
+
+    // Add one dot in the legend for each name.
+    var size = 20
+    SVG.selectAll("mydots")
+    .data(keys)
+    .enter()
+    .append("rect")
+        .attr("x", 0)
+        .attr("y", function(d,i){ return i*(size+5)})
+        .attr("width", size)
+        .attr("height", size)
+        .style("fill", function(d){ return color(d)})
+
+    // Add one dot in the legend for each name.
+    SVG.selectAll("mylabels")
+    .data(keys)
+    .enter()
+    .append("text")
+        .attr("x", size*1.2)
+        .attr("y", function(d,i){ return i*(size+5) + (size/2)})
+        .style("fill", "black")
+        .text(function(d){ return d})
+        .attr("text-anchor", "left")
+        .style("alignment-baseline", "middle")
+
+// Load external data
+Promise.all([d3.json("sgmap.json"), d3.csv("population2021.csv")]).then(data => {
+
+for (let i = 0; i < data[0].features.length; i++) {
+    for (let j = 0; j < data[1].length; j++) {
+        if (String(data[1][j].Subzone).toUpperCase() === String(data[0].features[i].properties.Name)) {
+            data[0].features[i].properties.Population = data[1][j].Population;
+        }
+    }
+}
+console.log(data[0])
+console.log(data[1])
+
+// Map and projection
+var projection = d3.geoMercator()
+    .center([103.851959, 1.290270])
+    .fitExtent([[20, 20], [980, 580]], data[0]);
+
+let geopath = d3.geoPath().projection(projection);
+
+// Create tooltip
+var tooltip = d3.select("#my_dataviz")
+      .append("div")
+      .style("opacity", 0)
+      .attr("class", "tooltip")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px")
+      .style("position", "absolute")
+
+//Append map and color based on population
+svg.append("g")
+    .attr("id", "districts")
+    .selectAll("path")
+    .data(data[0].features)
+    .enter()
+    .append("path")
+    .attr("d", geopath)
+    .attr("fill", function(d){
+            if (parseInt(d.properties.Population) < 10000 ) {
+                return "#BCD2E8";
+                } else if (
+                parseInt(d.properties.Population) > 10000 && parseInt(d.properties.Population) < 20000
+                ) {
+                return "#91BAD6";
+                } else if (
+                parseInt(d.properties.Population) > 20000 && parseInt(d.properties.Population) < 30000
+                ) {
+                return "#73A5C6";
+                } else if (
+                parseInt(d.properties.Population) > 30000 && parseInt(d.properties.Population) < 40000
+                ) {
+                return "#528AAE";
+                } else if (
+                parseInt(d.properties.Population) > 40000 && parseInt(d.properties.Population) < 50000
+                ) {
+                return "#2E5984";
+                } else if (
+                parseInt(d.properties.Population) > 50000
+                ) {
+                return "#1E3F66";
+                } else {
+                return "#dfdfdf"
+                }
+            console.log(d.properties)
+        })
+        .on('mouseover', function (event, d) {
+            tooltip
+                .html(d.properties.Name + "</b><br> Population: " + d.properties.Population)
+                .style("opacity", 1)  
+      
+            })
+            .on("mousemove", function (event) {
+            tooltip
+                .style("top", event.pageY - 10 + "px")
+                .style("left", event.pageX + 10 + "px");
+            })
+            .on('mouseout', function (event) {
+            tooltip
+                .style('opacity', '0');   
+            });
+})
+
+</script>
+
+</body>
+</html>
